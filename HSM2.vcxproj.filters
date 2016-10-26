@@ -15,27 +15,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="StateMachine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Door.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TestCase.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="Door.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HSM2.cpp">
+    <ClCompile Include="TestCase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Hsm2Test.cpp">
+    <ClCompile Include="LeanHsmTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

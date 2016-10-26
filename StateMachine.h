@@ -1,12 +1,21 @@
 // Copyright 2016, Jason Conaway
+// LeanHsm - The flexible and efficient hierachical state machine
 #pragma once
 
 #include <algorithm>
 #include <functional>
 #include <iterator>
 #include <vector>
+#include <cstdarg>
 
-namespace Hsm2
+#define LEAN_HSM_ALIASES(OwnerType, EventType) \
+	using Hsm = LeanHsm::StateMachine<OwnerType, EventType>; \
+	using State = Hsm::State; \
+	using Name = Hsm::Name; \
+	using StartIn = Hsm::StartIn; \
+	using When = Hsm::When;
+
+namespace LeanHsm
 {
 	template<typename OwnerType, typename EventType>
 	class StateMachine
@@ -16,32 +25,28 @@ namespace Hsm2
 		struct Transition;
 		struct StartIn;
 		struct When;
-		//struct If;
 
 		using Event = EventType;
 		using Action = std::function<void(StateMachine& owner)>;
 		using Transitions = std::vector<Transition>;
 		using Guard = std::function<bool(StateMachine& owner)>;
-		//using Conditionals = std::vector<If>;
+		using EventToString = std::function<std::string (EventType e)>;
+		using Log = std::function<void(const char* format, va_list args)>;
 
 		struct State
 		{
 			State Parent(const State& s) && { parent = &s; return std::move(*this);	}
-			State Entry(const Action& a) && { entry = a; return std::move(*this); }
-			State Exit(const Action& a) && { exit = a; return std::move(*this); }
+			State OnEntry(const Action& a) && { entry = a; return std::move(*this); }
+			State OnExit(const Action& a) && { exit = a; return std::move(*this); }
 			State Initially(StartIn&& t) && { initialTransition = std::move(t);	return std::move(*this); }
 			State Always(When&& t) && { transitions.emplace_back(std::forward<Transition>(t)); return std::move(*this); }
 			
-			// Use conditional transitions very sparingly
-			//State Conditionally(If&& c) && { conditionals.emplace_back(std::forward<If>(c)); return std::move(*this); }
-
 			const char* name{ nullptr };
 			const State* parent{ nullptr };
 			Action entry{ nullptr };
 			Action exit{ nullptr };
 			StartIn initialTransition;
 			Transitions transitions;
-			//Conditionals conditionals;
 
 			State(State&&) = default;
 			State& operator=(State&&) = default;
@@ -49,6 +54,7 @@ namespace Hsm2
 			explicit State(const char* n) : name(n) {} // For the Name type
 		};
 
+		// State definitions should begin with a named state
 		struct Name : public State
 		{
 			explicit Name(const char* n) : State(n) {}
@@ -82,36 +88,33 @@ namespace Hsm2
 			When Do(const Action& a) && { action = a; return std::move(*this); }
 		};
 
-		/***
-		struct If
-		{
-			explicit If(const Guard& c) : guard(c) {}
-			If Then(Transition&& t) { onTrue = std::move(t); return std::move(*this); }
-			If Else(Transition&& t) { onFalse = std::move(t); return std::move(*this); }
-			Gaurd guard;
-			Transition onTrue;
-			Transition onFalse;
-		};
-		***/
+		/// StateMachine methods
 
-		///
-
-		StateMachine(OwnerType& o, const State& s) : mOwner(o), mCurrentState(&s) {}
+		StateMachine(OwnerType& owner, const State& topState, const Log& log, const EventToString& e2s)
+			: mOwner(owner), mCurrentState(&topState), mLog(log), mEventToString(e2s) {}
+		void OnEntryAndExit(Action entry, Action exit) { mOnEntry = entry; mOnExit = exit; }
 		void Initialize() { if (mCurrentState) { DoTransition(mCurrentState->initialTransition); } }
 		OwnerType& GetOwner() const { return mOwner; }
 		const State& CurrentState() const { return *mCurrentState; }
+		bool IsInState(const State& s) const;
 		bool HandeleEvent(const EventType& e);
-		
+
 	private:
 		std::vector<const State*> GetCommonAncestorPath(const State* a, const State* b) const;
-		void DoTransition(const Transition& t);
+		bool DoTransition(const Transition& t);
+		void LogEntry(const char* format, ...);
 
 		OwnerType& mOwner;
 		const State* mCurrentState{ nullptr };
+		Action mOnEntry;
+		Action mOnExit;
+		Log mLog;
+		EventToString mEventToString;
 	};
 
 	template<typename OwnerType, typename EventType>
-	std::vector<typename const StateMachine<OwnerType, EventType>::State*> StateMachine<OwnerType, EventType>::GetCommonAncestorPath(const State* a, const State* b) const
+	std::vector<typename const StateMachine<OwnerType, EventType>::State*>
+		StateMachine<OwnerType, EventType>::GetCommonAncestorPath(const State* a, const State* b) const
 	{
 		std::vector<const State*> aPath;
 		std::vector<const State*> bPath;
@@ -142,44 +145,73 @@ namespace Hsm2
 	template<typename OwnerType, typename EventType>
 	bool StateMachine<OwnerType, EventType>::HandeleEvent(const EventType& e)
 	{
-		if (!mCurrentState) { return false; }
-		auto state = mCurrentState;
-
-		// find transition
-		auto transition = std::find_if(
-			begin(state->transitions)
-			end(state->transitions),
-			[e](const Transition& t) { return t.eventId == e; });
-		if (transition != end(state->transitions))
+		if (!mCurrentState)
 		{
-			DoTransition(*transition);
-			return true;
+			LogEntry("Cannot transition from a null state");
+			return false; 
 		}
-		// TODO - support conditionals
+		auto state = mCurrentState;
+		while (state)
+		{
+			// find transition
+			auto transition = std::find_if(
+				begin(state->transitions),
+				end(state->transitions),
+				[e](const Transition& t) { return t.eventId == e; });
+			if (transition != end(state->transitions))
+			{				
+				LogEntry("Event [%s]", mEventToString(e).c_str());
+				DoTransition(*transition);
+				return true;
+			}
+			else
+			{
+				state = state->parent;
+			}
+		}
 
+		LogEntry("No transition for event [%s] from %s", mEventToString(e).c_str(), mCurrentState->name);
 		return false;
 	}
 
 	template<typename OwnerType, typename EventType>
-	void StateMachine<OwnerType, EventType>::DoTransition(const Transition& transition)
+	bool StateMachine<OwnerType, EventType>::DoTransition(const Transition& transition)
 	{
-		if (!mCurrentState || !transition.target) { return; }
+		if (!mCurrentState)
+		{
+			LogEntry("Cannot transition from a null state");
+			return false;
+		}
+
+		auto target = transition.target;
+		if (!target) 
+		{
+			target = mCurrentState;
+		}
+		LogEntry("%s -> %s", mCurrentState->name, target->name);
 
 		// exit up to common ancestor
-		auto targetPath = GetCommonAncestorPath(mCurrentState, transition.target);
+		auto targetPath = GetCommonAncestorPath(mCurrentState, target);
 		if (!targetPath.empty())
 		{
 			auto ancestor = targetPath.back();
 			targetPath.pop_back();
 			while (mCurrentState != ancestor)
 			{
+				if (mOnExit)
+				{
+					mOnExit(*this);
+				}
 				if (mCurrentState->exit)
 				{
 					mCurrentState->exit(*this);
 				}
-				mCurrentState = mCurrentState->parent;
+				if (mCurrentState->parent)
+				{
+					mCurrentState = mCurrentState->parent;
+				}
 			}
-		}
+		}		
 
 		// do transition action
 		if (transition.action)
@@ -187,16 +219,58 @@ namespace Hsm2
 			transition.action(*this);
 		}
 
+		bool wasDescendantOfTarget = targetPath.empty();
+
 		// enter down to target
 		while (!targetPath.empty())
 		{
 			mCurrentState = targetPath.back();
 			targetPath.pop_back();
+			if (mOnEntry)
+			{
+				mOnEntry(*this);
+			}
 			if (mCurrentState->entry)
 			{
 				mCurrentState->entry(*this);
 			}
-		} 
+		}
+
+		if (!wasDescendantOfTarget && mCurrentState->initialTransition.target)
+		{
+			// perform initial transition
+			return DoTransition(mCurrentState->initialTransition);
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	template<typename OwnerType, typename EventType>
+	bool StateMachine<OwnerType, EventType>::IsInState(const State& s) const
+	{
+		// check if 's' is in our current state's lineage
+		const State* cs = mCurrentState;
+		while (cs)
+		{
+			if (cs == &s)
+			{
+				return true;
+			}
+			cs = cs->parent;
+		}
+
+		return false;
+	}
+
+	template<typename OwnerType, typename EventType>
+	void StateMachine<OwnerType, EventType>::LogEntry(const char* format, ...)
+	{
+		va_list args;
+		va_start(args, format);
+		mLog(format, args);
+		va_end(args);
 	}
 
 } // namespace Hsm2
