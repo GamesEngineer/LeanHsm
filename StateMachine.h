@@ -1,5 +1,41 @@
 // Copyright 2016, Jason Conaway
 // LeanHsm - The flexible and efficient hierachical state machine
+//
+// USAGE:
+// Classes that own a StateMachine instance should use the LEAN_HSM_ALIASES macro
+// to define aliases in the class' public scope. This helps to keep the state
+// definitions compact and readable.
+//
+// The owning class should also declare its states as static members. The definitions
+// of those states should use the following pattern:
+//
+// const OwnerClass::State OwnerClass::SomeState {
+//     Name("SomeState") /** Name of state used for logging **/
+//     .Parent(MyParentState) /** Parent state must be omitted for top-level state **/
+//     /** (optional) Action to be invoked after entering this state **/
+//     .OnEntry(SomeStaticMethodOfOwner)
+//      /** (optional) Action to be invoked before leaving this state **/
+//     .OnExit(AnotherStaticMethodOfOwner)
+//     /** Initial transition to a sub-state **/
+//     .Initially(StartIn(MySubState))
+//     /** Transitions to other states. Actions are optional. **/
+//     .Always(When(Event::Poke).Goto(YetAnotherState).Do(YetAnotherStaticMethodOfOwner))
+//     .Always(When(Event::Prod).Goto(YetAnotherState)
+//     /** Internal state transitions; stay in the same state, but do an action upon an event **/
+//     .Always(When(Event::Pull).Do(MoreStaticMethodOfOwner))
+// };
+//
+// Then when HandleEvent is called on the state machine, the correct transition will
+// be performed from the current state to the transition's target state.
+//
+// Order of operations when performing a state transition:
+// 1) Exit states, starting with the current state, up to the common ancestor of the
+//    current state and the target state. The OnExit action of each of exited state
+//    is invoked in sequence.
+// 2) The transition's action (if any) is invoked while in the common ancestor state.
+// 3) Enter states down to the target state. The OnEnter action of each entered state
+//    is invoked, ending with (and including) the target state.
+//
 #pragma once
 
 #include <algorithm>
