@@ -10,18 +10,26 @@
 // of those states should use the following pattern:
 //
 // const OwnerClass::State OwnerClass::SomeState {
-//     Name("SomeState") /** Name of state used for logging **/
-//     .Parent(MyParentState) /** Parent state must be omitted for top-level state **/
-//     /** (optional) Action to be invoked after entering this state **/
+//     /** Name of the state, used for logging **/
+//     Name("SomeState")
+//
+//     /** Parent state (must be omitted for top-level state) **/
+//     .Parent(MyParentState)
+//
+//     /** (optional) Action to be invoked when entering this state. **/
 //     .OnEntry(SomeStaticMethodOfOwner)
-//      /** (optional) Action to be invoked before leaving this state **/
+//
+//      /** (optional) Action to be invoked when leaving this state. **/
 //     .OnExit(AnotherStaticMethodOfOwner)
-//     /** Initial transition to a sub-state **/
+//
+//     /** Initial transition to a sub-state, occurs when entering this state. **/
 //     .Initially(StartIn(MySubState))
+//
 //     /** Transitions to other states. Actions are optional. **/
 //     .Always(When(Event::Poke).Goto(YetAnotherState).Do(YetAnotherStaticMethodOfOwner))
 //     .Always(When(Event::Prod).Goto(YetAnotherState)
-//     /** Internal state transitions; stay in the same state, but do an action upon an event **/
+//
+//     /** Internal state transitions; stay in the same state, but do an action upon an event. **/
 //     .Always(When(Event::Pull).Do(MoreStaticMethodOfOwner))
 // };
 //
@@ -35,6 +43,8 @@
 // 2) The transition's action (if any) is invoked while in the common ancestor state.
 // 3) Enter states down to the target state. The OnEnter action of each entered state
 //    is invoked, ending with (and including) the target state.
+// 4) If the state that owns this transition was not a descendant of the target state,
+//    then the initial transition of the target state is invoked.
 //
 #pragma once
 
