@@ -102,7 +102,8 @@ namespace LeanHsm
 	private:
 		std::vector<const State*> GetCommonAncestorPath(const State* a, const State* b) const;
 		bool DoTransition(const Transition& t);
-		void LogEntry(const char* format, ...);
+		enum Severity { Info, Warning, Error };
+		void LogEntry(Severity severity, const char* format, ...);
 
 		OwnerType& mOwner;
 		const State* mCurrentState{ nullptr };
@@ -147,7 +148,7 @@ namespace LeanHsm
 	{
 		if (!mCurrentState)
 		{
-			LogEntry("Cannot transition from a null state");
+			LogEntry(Error, "Cannot transition from a null state");
 			return false; 
 		}
 		auto state = mCurrentState;
@@ -160,7 +161,7 @@ namespace LeanHsm
 				[e](const Transition& t) { return t.eventId == e; });
 			if (transition != end(state->transitions))
 			{				
-				LogEntry("Event [%s]", mEventToString(e).c_str());
+				LogEntry(Info, "Event [%s]", mEventToString(e).c_str());
 				DoTransition(*transition);
 				return true;
 			}
@@ -170,7 +171,8 @@ namespace LeanHsm
 			}
 		}
 
-		LogEntry("No transition for event [%s] from %s", mEventToString(e).c_str(), mCurrentState->name);
+		LogEntry(Warning, "No transition for event [%s] from %s",
+			mEventToString(e).c_str(), mCurrentState->name);
 		return false;
 	}
 
@@ -179,7 +181,7 @@ namespace LeanHsm
 	{
 		if (!mCurrentState)
 		{
-			LogEntry("Cannot transition from a null state");
+			LogEntry(Error, "Cannot transition from a null state");
 			return false;
 		}
 
@@ -188,7 +190,7 @@ namespace LeanHsm
 		{
 			target = mCurrentState;
 		}
-		LogEntry("%s -> %s", mCurrentState->name, target->name);
+		LogEntry(Info, "%s -> %s", mCurrentState->name, target->name);
 
 		// exit up to common ancestor
 		auto targetPath = GetCommonAncestorPath(mCurrentState, target);
@@ -265,11 +267,13 @@ namespace LeanHsm
 	}
 
 	template<typename OwnerType, typename EventType>
-	void StateMachine<OwnerType, EventType>::LogEntry(const char* format, ...)
+	void StateMachine<OwnerType, EventType>::LogEntry(Severity severity, const char* format, ...)
 	{
+		const std::string severityLabels[] = { "","WARNING| ", "ERROR| " };
+		std::string decoratedFormat = severityLabels[severity] + format;
 		va_list args;
 		va_start(args, format);
-		mLog(format, args);
+		mLog(decoratedFormat.c_str(), args);
 		va_end(args);
 	}
 
