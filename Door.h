@@ -21,6 +21,7 @@ public:
 	bool HandleEvent(Event e) { return mStateMachine.HandeleEvent(e); }
 	bool IsInState(const State& s) const { return mStateMachine.IsInState(s); }
 	const State& GetState() const { return mStateMachine.CurrentState(); }
+	const std::string& GetCurrentEffect() const { return mCurrentEffect; }
 
 	// States
 	static const State Exists;
@@ -36,6 +37,8 @@ private:
 	// Actions
 	static void OnEntry(Hsm& hsm);
 	static void OnExit(Hsm& hsm);
+	static Hsm::Action PlayFx(const std::string& effectName);
 
 	Hsm mStateMachine{ *this, Exists, Log, EventToString };
+	std::string mCurrentEffect;
 };

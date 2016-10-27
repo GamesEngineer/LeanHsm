@@ -19,8 +19,7 @@ const TestCase::State TestCase::Testing
 // Testing.Alpha
 const TestCase::State TestCase::Alpha
 {
-	Name("Alpha")
-	.Parent(Testing)
+	Name("Alpha").Parent(Testing)
 	.OnEntry(IncCounter)
 	.Always(When("Jump").Goto(Beta))
 	.Always(When("Run").Goto(Beta).Do(IncCounter))
@@ -29,8 +28,7 @@ const TestCase::State TestCase::Alpha
 // Testing.Beta
 const TestCase::State TestCase::Beta
 {
-	Name("Beta")
-	.Parent(Testing)
+	Name("Beta").Parent(Testing)
 	.OnEntry(IncCounter)
 	.Initially(StartIn(Gamma).Do(IncCounter))
 	.Always(When("Hide").Do(IncCounter))
@@ -39,8 +37,7 @@ const TestCase::State TestCase::Beta
 // Testing.Beta.Gamma
 const TestCase::State TestCase::Gamma
 {
-	Name("Gamma")
-	.Parent(Beta)
+	Name("Gamma").Parent(Beta)
 	.OnExit(IncCounter)
 };
 

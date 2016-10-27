@@ -18,34 +18,31 @@ const Door::State Door::Exists
 // Exists.Closed
 const Door::State Door::Closed
 {
-	Name("Closed")
-	.Parent(Exists)
+	Name("Closed").Parent(Exists)
 	.Initially(StartIn(Unlocked))
 };
 
 // Exists.Closed.Locked
 const Door::State Door::Locked
 {
-	Name("Locked")
-	.Parent(Closed)
-	.Always(When(Event::Unlock).Goto(Unlocked))
+	Name("Locked").Parent(Closed)
+	.Always(When(Event::Unlock).Goto(Unlocked).Do(PlayFx("UnlockingDoor")))
+	.Always(When(Event::Open).Do(PlayFx("RattleLockedDoor")))
 };
 
 // Exists.Closed.Unlocked
 const Door::State Door::Unlocked
 {
-	Name("Unlocked")
-	.Parent(Closed)
-	.Always(When(Event::Lock).Goto(Locked))
-	.Always(When(Event::Open).Goto(Opened))
+	Name("Unlocked").Parent(Closed)
+	.Always(When(Event::Lock).Goto(Locked).Do(PlayFx("LockingDoor")))
+	.Always(When(Event::Open).Goto(Opened).Do(PlayFx("OpeningDoor")))
 };
 
 // Exists.Opened
 const Door::State Door::Opened
 {
-	Name("Opened")
-	.Parent(Exists)
-	.Always(When(Event::Close).Goto(Closed))
+	Name("Opened").Parent(Exists)
+	.Always(When(Event::Close).Goto(Closed).Do(PlayFx("ClosingDoor")))
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -60,6 +57,18 @@ const Door::State Door::Opened
 {
 	std::cout << "Door| exited state " << hsm.CurrentState().name << std::endl;
 }
+
+/*static*/ Door::Hsm::Action Door::PlayFx(const std::string& effectName)
+{
+	auto action = [effectName](Hsm& hsm) {
+		std::cout << "Door| playing effect '" << effectName << "'" << std::endl;
+		hsm.GetOwner().mCurrentEffect = effectName;
+		return;
+	};
+
+	return action;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Door methods

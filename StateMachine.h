@@ -88,7 +88,7 @@ namespace LeanHsm
 			When Do(const Action& a) && { action = a; return std::move(*this); }
 		};
 
-		/// StateMachine methods
+		// StateMachine methods
 
 		StateMachine(OwnerType& owner, const State& topState, const Log& log, const EventToString& e2s)
 			: mOwner(owner), mCurrentState(&topState), mLog(log), mEventToString(e2s) {}

@@ -36,7 +36,7 @@ int main()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define REQUIRE_TRUE(x) { if (!x) return false; }
+#define REQUIRE_TRUE(x) { if (!(x)) return false; }
 #define REQUIRE_FALSE(x) { if (x) return false; }
 
 bool Test_Door()
@@ -50,16 +50,22 @@ bool Test_Door()
 	REQUIRE_TRUE(door.HandleEvent(Event::Lock));
 	REQUIRE_TRUE(door.IsInState(door.Closed));
 	REQUIRE_TRUE(door.IsInState(door.Locked));
+	REQUIRE_TRUE(door.GetCurrentEffect() == "LockingDoor");
 
-	// Must not be openable when locked
-	REQUIRE_FALSE(door.HandleEvent(Event::Open));
+	// Must not be openable when locked, but will play the rattle effect
+	REQUIRE_TRUE(door.HandleEvent(Event::Open));
+	REQUIRE_TRUE(door.IsInState(door.Closed));
+	REQUIRE_TRUE(door.IsInState(door.Locked));
+	REQUIRE_TRUE(door.GetCurrentEffect() == "RattleLockedDoor");
 
 	REQUIRE_TRUE(door.HandleEvent(Event::Unlock));
 	REQUIRE_TRUE(door.IsInState(door.Closed));
 	REQUIRE_TRUE(door.IsInState(door.Unlocked));
+	REQUIRE_TRUE(door.GetCurrentEffect() == "UnlockingDoor");
 
 	REQUIRE_TRUE(door.HandleEvent(Event::Open));
 	REQUIRE_TRUE(door.IsInState(door.Opened));
+	REQUIRE_TRUE(door.GetCurrentEffect() == "OpeningDoor");
 
 	// Must not be lockable when opened
 	REQUIRE_FALSE(door.HandleEvent(Event::Lock));
@@ -67,10 +73,12 @@ bool Test_Door()
 	REQUIRE_TRUE(door.HandleEvent(Event::Close));
 	REQUIRE_TRUE(door.IsInState(door.Closed));
 	REQUIRE_TRUE(door.IsInState(door.Unlocked));
+	REQUIRE_TRUE(door.GetCurrentEffect() == "ClosingDoor");
 
 	REQUIRE_TRUE(door.HandleEvent(Event::Lock));
 	REQUIRE_TRUE(door.IsInState(door.Closed));
 	REQUIRE_TRUE(door.IsInState(door.Locked));
+	REQUIRE_TRUE(door.GetCurrentEffect() == "LockingDoor");
 
 	return true; // passed all requirements
 }
