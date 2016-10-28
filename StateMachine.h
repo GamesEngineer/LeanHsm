@@ -161,10 +161,20 @@ public:
 		
 	// Specifies additional entry and exit actions for all states.
 	// These are invoked before state entry/exit actions.
-	void OnEntryAndExit(Action entry, Action exit) { mOnEntry = entry; mOnExit = exit; }
+	void OnEntryAndExit(Action entry, Action exit)
+	{
+		mOnEntry = entry;
+		mOnExit = exit; 
+	}
 		
 	// Initializes the state machine by transitioning to the initial state.
-	void Initialize() { if (mCurrentState) { DoTransition(mCurrentState->initialTransition); } }
+	void Initialize()
+	{
+		if (mCurrentState)
+		{
+			DoTransition(mCurrentState->initialTransition);
+		}
+	}
 		
 	// Returns the current state
 	const State& CurrentState() const { return *mCurrentState; }
