@@ -32,10 +32,11 @@ public:
 	static const State /****/Unlocked;
 	static const State /**/Opened;
 
+private:
+	// Methods required by the state machine 
 	static void Log(const char* format, va_list args);
 	static std::string EventToString(Event e);
 
-private:
 	// Actions
 	static void OnEntry(Hsm& hsm);
 	static void OnExit(Hsm& hsm);
