@@ -1,4 +1,6 @@
 // Copyright 2016, Jason Conaway
+// This is a simple model of a door using the LeanHsm::StateMachine.
+// The door can be closed or open, and when closed it can be locked or unlocked.
 #pragma once
 
 #include "StateMachine.h"
@@ -6,7 +8,7 @@
 class Door
 {
 public:
-	enum class Event : int
+	enum class Event
 	{
 		Open,
 		Close,
@@ -41,6 +43,6 @@ private:
 	static void LockedLightOff(Hsm& hsm);
 	static Hsm::Action PlayFx(const std::string& effectName);
 
-	Hsm mStateMachine{ *this, Exists, Log, EventToString };
+	OwnedHsm mStateMachine{ *this, Exists, Log, EventToString };
 	std::string mCurrentEffect;
 };

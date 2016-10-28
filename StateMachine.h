@@ -2,14 +2,14 @@
 // LeanHsm - The flexible and efficient hierachical state machine
 //
 // USAGE:
-// Classes that own a StateMachine instance should use the LEAN_HSM_ALIASES macro
-// to define aliases in the class' public scope. This helps to keep the state
-// definitions compact and readable.
+// Classes that have an OwnedStateMachine should use the LEAN_HSM_ALIASES macro
+// to define aliases in the public scope of the class. This helps to keep the
+// state definitions compact and readable.
 //
 // The owning class should also declare its states as static members. The
 // definitions of those states should use the following pattern:
 //
-// const OwnerClass::State OwnerClass::SomeState {
+// const Owner::State Owner::SomeState {
 //     /** Name of the state, used for logging **/
 //     Name("SomeState")
 //
@@ -33,7 +33,7 @@
 //     .Always(When(Event::Pull).Do(MoreStaticMethodOfOwner))
 // };
 //
-// Then when HandleEvent is called on the state machine, the correct transition
+// When HandleEvent(event) is called on the state machine, the correct transition
 // will be performed from the current state to the transition's target state.
 //
 // Order of operations when performing a state transition:
@@ -55,8 +55,13 @@
 #include <vector>
 #include <cstdarg>
 
+// Owners of state machines should use this macro to define
+// aliases in their public scope. Then, they should have an
+// instance of OwnedHsm as their state machine, which is
+// initialized with the top state of a state graph.
 #define LEAN_HSM_ALIASES(OwnerType, EventType) \
-	using Hsm = LeanHsm::StateMachine<OwnerType, EventType>; \
+	using OwnedHsm = LeanHsm::OwnedStateMachine<OwnerType, EventType>; \
+	using Hsm = LeanHsm::StateMachine<EventType>; \
 	using State = Hsm::State; \
 	using Name = Hsm::Name; \
 	using StartIn = Hsm::StartIn; \
@@ -64,7 +69,7 @@
 
 namespace LeanHsm
 {
-	template<typename OwnerType, typename EventType>
+	template<typename EventType>
 	class StateMachine
 	{
 	public:
@@ -74,12 +79,16 @@ namespace LeanHsm
 		struct When;
 
 		using Event = EventType;
-		using Action = std::function<void(StateMachine& owner)>;
+		using Action = std::function<void(StateMachine& sm)>;
 		using Transitions = std::vector<Transition>;
-		using Guard = std::function<bool(StateMachine& owner)>;
+		using Guard = std::function<bool(StateMachine& sm)>;
 		using EventToString = std::function<std::string (EventType e)>;
 		using Log = std::function<void(const char* format, va_list args)>;
 
+		// States reference each other via Transitions and Parents to form
+		// a hierachical state graph. The StateMachine handles events to
+		// tigger transitions among states in the graph, performing actions
+		// along the way.
 		struct State
 		{
 			// rvalue methods for initializing state properties
@@ -108,6 +117,8 @@ namespace LeanHsm
 			explicit Name(const char* n) : State(n) {}
 		};
 
+		// Transition is a generic state transition.
+		// Use the StartIn and When derivations when defining states.
 		struct Transition
 		{
 			EventType eventId{};
@@ -122,30 +133,53 @@ namespace LeanHsm
 			explicit Transition(const EventType& e) : eventId(e) {} // for the When transition type
 		};
 
+		// StartIn is a used with State::Initially to create an intial transition
 		struct StartIn : public Transition
 		{
-			StartIn() = default;
+			StartIn() = default; // for states that omit initial transitions
 			explicit StartIn(const State& s) : Transition(s) {}
+			// Use Do to specify transition actions. (Optional) 
 			StartIn Do(const Action& a) && { action = a; return std::move(*this); }
 		};
 
+		// When is used with State::Always to create a normal state transition
 		struct When : public Transition
 		{
 			explicit When(const EventType& e) : Transition(e) {}
+			// Use Goto for normal transitions. Omit it for internal transitions.
 			When Goto(const State& s) && { target = &s; return std::move(*this); }
+			// Use Do to specify transition actions. (Optional) 
 			When Do(const Action& a) && { action = a; return std::move(*this); }
 		};
 
+		///////////////////////////////////////////////////////////////////////
 		// StateMachine methods
 
-		StateMachine(OwnerType& owner, const State& topState, const Log& log, const EventToString& e2s)
-			: mOwner(owner), mCurrentState(&topState), mLog(log), mEventToString(e2s) {}
+		StateMachine(const State& topState, const Log& log, const EventToString& e2s)
+			: mCurrentState(&topState), mLog(log), mEventToString(e2s) {}
+		
+		// Specifies additional entry and exit actions for all states.
+		// These are invoked before state entry/exit actions.
 		void OnEntryAndExit(Action entry, Action exit) { mOnEntry = entry; mOnExit = exit; }
+		
+		// Initializes the state machine by transitioning to the initial state.
 		void Initialize() { if (mCurrentState) { DoTransition(mCurrentState->initialTransition); } }
-		OwnerType& GetOwner() const { return mOwner; }
+		
+		// Returns the current state
 		const State& CurrentState() const { return *mCurrentState; }
+		
+		// Returns true if the current state is in the specified state.
+		// This includes ancestor states. Returns false, otherwise.
 		bool IsInState(const State& s) const;
+
+		// Finds a state transition in the current state that is associated with
+		// this event, and performs the state transition. If matching transition
+		// was found, then this funtion returns true. Returns false, otherwise.
 		bool HandeleEvent(const EventType& e);
+
+		// Returns the owner object when this is an OwnedStateMachine.
+		// This is used by Actions that need a reference to their owner.
+		template<typename OwnerType> OwnerType& Owner() const;
 
 	private:
 		std::vector<const State*> GetCommonAncestorPath(const State* a, const State* b) const;
@@ -153,7 +187,6 @@ namespace LeanHsm
 		enum Severity { Info, Warning, Error };
 		void LogEntry(Severity severity, const char* format, ...);
 
-		OwnerType& mOwner;
 		const State* mCurrentState{ nullptr };
 		Action mOnEntry;
 		Action mOnExit;
@@ -161,9 +194,33 @@ namespace LeanHsm
 		EventToString mEventToString;
 	};
 
+	// OwnedStateMachine is a StateMachine with an owner object.
+	// Actions often need to access to their owner, and this provides access.
 	template<typename OwnerType, typename EventType>
-	std::vector<typename const StateMachine<OwnerType, EventType>::State*>
-		StateMachine<OwnerType, EventType>::GetCommonAncestorPath(const State* a, const State* b) const
+	class OwnedStateMachine : public StateMachine<EventType>
+	{
+	public:
+		OwnedStateMachine(OwnerType& owner, const State& topState, const Log& log, const EventToString& e2s)
+			: StateMachine(topState, log, e2s), mOwner(owner) {}
+		OwnerType& GetOwner() const { return mOwner; }
+	private:
+		OwnerType& mOwner;
+	};
+
+	///////////////////////////////////////////////////////////////////////////
+	// StateMachine implementation
+
+	template<typename EventType>
+	template<typename OwnerType>
+	OwnerType& StateMachine<EventType>::Owner() const
+	{
+		using OHSM = OwnedStateMachine<OwnerType, EventType>;
+		return static_cast<const OHSM&>(*this).GetOwner();
+	}
+
+	template<typename EventType>
+	std::vector<typename const StateMachine<EventType>::State*>
+		StateMachine<EventType>::GetCommonAncestorPath(const State* a, const State* b) const
 	{
 		std::vector<const State*> aPath;
 		std::vector<const State*> bPath;
@@ -191,8 +248,8 @@ namespace LeanHsm
 		return std::move(bPath);
 	}
 
-	template<typename OwnerType, typename EventType>
-	bool StateMachine<OwnerType, EventType>::HandeleEvent(const EventType& e)
+	template<typename EventType>
+	bool StateMachine<EventType>::HandeleEvent(const EventType& e)
 	{
 		if (!mCurrentState)
 		{
@@ -223,8 +280,8 @@ namespace LeanHsm
 		return false;
 	}
 
-	template<typename OwnerType, typename EventType>
-	bool StateMachine<OwnerType, EventType>::DoTransition(const Transition& transition)
+	template<typename EventType>
+	bool StateMachine<EventType>::DoTransition(const Transition& transition)
 	{
 		if (!mCurrentState)
 		{
@@ -296,8 +353,8 @@ namespace LeanHsm
 		}
 	}
 
-	template<typename OwnerType, typename EventType>
-	bool StateMachine<OwnerType, EventType>::IsInState(const State& s) const
+	template<typename EventType>
+	bool StateMachine<EventType>::IsInState(const State& s) const
 	{
 		// check if 's' is in our current state's lineage
 		const State* cs = mCurrentState;
@@ -313,8 +370,8 @@ namespace LeanHsm
 		return false;
 	}
 
-	template<typename OwnerType, typename EventType>
-	void StateMachine<OwnerType, EventType>::LogEntry(Severity severity, const char* format, ...)
+	template<typename EventType>
+	void StateMachine<EventType>::LogEntry(Severity severity, const char* format, ...)
 	{
 		const std::string severityLabels[] = { "","WARNING| ", "ERROR| " };
 		std::string decoratedFormat = severityLabels[severity] + format;

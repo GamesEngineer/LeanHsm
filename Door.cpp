@@ -74,7 +74,7 @@ const Door::State Door::Opened
 {
 	auto action = [effectName](Hsm& hsm) {
 		std::cout << "Door| playing effect '" << effectName << "'" << std::endl;
-		hsm.GetOwner().mCurrentEffect = effectName;
+		hsm.Owner<Door>().mCurrentEffect = effectName;
 		return;
 	};
 
