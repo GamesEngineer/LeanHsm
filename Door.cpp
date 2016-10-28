@@ -26,6 +26,8 @@ const Door::State Door::Closed
 const Door::State Door::Locked
 {
 	Name("Locked").Parent(Closed)
+	.OnEntry(LockedLightOn)
+	.OnExit(LockedLightOff)
 	.Always(When(Event::Unlock).Goto(Unlocked).Do(PlayFx("UnlockingDoor")))
 	.Always(When(Event::Open).Do(PlayFx("RattleLockedDoor")))
 };
@@ -56,6 +58,16 @@ const Door::State Door::Opened
 /*static*/ void Door::OnExit(Hsm& hsm)
 {
 	std::cout << "Door| exited state " << hsm.CurrentState().name << std::endl;
+}
+
+/*static*/ void Door::LockedLightOn(Hsm& hsm)
+{
+	std::cout << "Door| light on" << std::endl;
+}
+
+/*static*/ void Door::LockedLightOff(Hsm& hsm)
+{
+	std::cout << "Door| light off" << std::endl;
 }
 
 /*static*/ Door::Hsm::Action Door::PlayFx(const std::string& effectName)

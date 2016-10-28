@@ -37,6 +37,8 @@ private:
 	// Actions
 	static void OnEntry(Hsm& hsm);
 	static void OnExit(Hsm& hsm);
+	static void LockedLightOn(Hsm& hsm);
+	static void LockedLightOff(Hsm& hsm);
 	static Hsm::Action PlayFx(const std::string& effectName);
 
 	Hsm mStateMachine{ *this, Exists, Log, EventToString };

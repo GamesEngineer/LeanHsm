@@ -9,23 +9,16 @@
 #include <string>
 
 #include "Door.h"
-#include "TestCase.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
 bool Test_Door();
-bool Test_TestCase();
 
 int main()
 {
 	std::cout
 		<< "Door| Test result: "
 		<< (Test_Door() ? "SUCCESS" : "FAILURE")
-		<< std::endl << std::endl;
-
-	std::cout
-		<< "TestCase| Test result: "
-		<< (Test_TestCase() ? "SUCCESS" : "FAILURE")
 		<< std::endl << std::endl;
 
 	std::cout << "Press ENTER to continue... " << std::flush;
@@ -79,16 +72,6 @@ bool Test_Door()
 	REQUIRE_TRUE(door.IsInState(door.Closed));
 	REQUIRE_TRUE(door.IsInState(door.Locked));
 	REQUIRE_TRUE(door.GetCurrentEffect() == "LockingDoor");
-
-	return true; // passed all requirements
-}
-
-bool Test_TestCase()
-{
-	TestCase testCase;
-	REQUIRE_TRUE(testCase.HandleEvent("Jump"));
-	REQUIRE_TRUE(testCase.HandleEvent("Hide"));
-	REQUIRE_TRUE(testCase.HandleEvent("Reset"));
 
 	return true; // passed all requirements
 }

@@ -149,12 +149,10 @@
   <ItemGroup>
     <ClInclude Include="Door.h" />
     <ClInclude Include="StateMachine.h" />
-    <ClInclude Include="TestCase.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Door.cpp" />
     <ClCompile Include="LeanHsmTest.cpp" />
-    <ClCompile Include="TestCase.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

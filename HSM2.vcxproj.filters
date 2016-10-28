@@ -21,15 +21,9 @@
     <ClInclude Include="Door.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="TestCase.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Door.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TestCase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LeanHsmTest.cpp">

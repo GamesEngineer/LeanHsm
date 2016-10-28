@@ -6,8 +6,8 @@
 // to define aliases in the class' public scope. This helps to keep the state
 // definitions compact and readable.
 //
-// The owning class should also declare its states as static members. The definitions
-// of those states should use the following pattern:
+// The owning class should also declare its states as static members. The
+// definitions of those states should use the following pattern:
 //
 // const OwnerClass::State OwnerClass::SomeState {
 //     /** Name of the state, used for logging **/
@@ -26,25 +26,26 @@
 //     .Initially(StartIn(MySubState))
 //
 //     /** Transitions to other states. Actions are optional. **/
-//     .Always(When(Event::Poke).Goto(YetAnotherState).Do(YetAnotherStaticMethodOfOwner))
+//     .Always(When(Event::Poke).Goto(YetAnotherState).Do(MoreStaticMethodOfOwner))
 //     .Always(When(Event::Prod).Goto(YetAnotherState)
 //
-//     /** Internal state transitions; stay in the same state, but do an action upon an event. **/
+//     /** Internal state transitions; stay in the same state, and do an action. **/
 //     .Always(When(Event::Pull).Do(MoreStaticMethodOfOwner))
 // };
 //
-// Then when HandleEvent is called on the state machine, the correct transition will
-// be performed from the current state to the transition's target state.
+// Then when HandleEvent is called on the state machine, the correct transition
+// will be performed from the current state to the transition's target state.
 //
 // Order of operations when performing a state transition:
-// 1) Exit states, starting with the current state, up to the common ancestor of the
-//    current state and the target state. The OnExit action of each of exited state
-//    is invoked in sequence.
-// 2) The transition's action (if any) is invoked while in the common ancestor state.
-// 3) Enter states down to the target state. The OnEnter action of each entered state
-//    is invoked, ending with (and including) the target state.
-// 4) If the state that owns this transition was not a descendant of the target state,
-//    then the initial transition of the target state is invoked.
+// 1) Exit states, starting with the current state, up to the common ancestor of
+//    the current state and the target state. The OnExit action of each of exited
+//    state is invoked in sequence.
+// 2) The transition's action (if any) is invoked while in the least common
+//    ancestor (LCA) state.
+// 3) Enter states down to the target state. The OnEnter action of each entered
+//    state is invoked, ending with (and including) the target state.
+// 4) If the state that owns this transition was not a descendant of the target
+//    state, then the initial transition of the target state is invoked.
 //
 #pragma once
 
@@ -81,6 +82,7 @@ namespace LeanHsm
 
 		struct State
 		{
+			// rvalue methods for initializing state properties
 			State Parent(const State& s) && { parent = &s; return std::move(*this);	}
 			State OnEntry(const Action& a) && { entry = a; return std::move(*this); }
 			State OnExit(const Action& a) && { exit = a; return std::move(*this); }
@@ -207,9 +209,8 @@ namespace LeanHsm
 				[e](const Transition& t) { return t.eventId == e; });
 			if (transition != end(state->transitions))
 			{				
-				LogEntry(Info, "Event [%s]", mEventToString(e).c_str());
-				DoTransition(*transition);
-				return true;
+				LogEntry(Info, "event [%s]", mEventToString(e).c_str());
+				return DoTransition(*transition);
 			}
 			else
 			{
@@ -236,7 +237,7 @@ namespace LeanHsm
 		{
 			target = mCurrentState;
 		}
-		LogEntry(Info, "%s -> %s", mCurrentState->name, target->name);
+		LogEntry(Info, "transition %s -> %s", mCurrentState->name, target->name);
 
 		// exit up to common ancestor
 		auto targetPath = GetCommonAncestorPath(mCurrentState, target);
@@ -323,4 +324,4 @@ namespace LeanHsm
 		va_end(args);
 	}
 
-} // namespace Hsm2
+} // namespace LeanHsm
