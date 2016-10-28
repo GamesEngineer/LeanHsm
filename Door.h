@@ -28,8 +28,8 @@ public:
 	// States
 	static const State Exists;
 	static const State /**/Closed;
-	static const State /****/Locked;
 	static const State /****/Unlocked;
+	static const State /****/Locked;
 	static const State /**/Opened;
 
 private:

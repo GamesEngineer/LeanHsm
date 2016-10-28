@@ -22,6 +22,14 @@ const Door::State Door::Closed
 	.Initially(StartIn(Unlocked))
 };
 
+// Exists.Closed.Unlocked
+const Door::State Door::Unlocked
+{
+	Name("Unlocked").Parent(Closed)
+	.Always(When(Event::Lock).Goto(Locked).Do(PlayFx("LockingDoor")))
+	.Always(When(Event::Open).Goto(Opened).Do(PlayFx("OpeningDoor")))
+};
+
 // Exists.Closed.Locked
 const Door::State Door::Locked
 {
@@ -30,14 +38,6 @@ const Door::State Door::Locked
 	.OnExit(LockedLightOff)
 	.Always(When(Event::Unlock).Goto(Unlocked).Do(PlayFx("UnlockingDoor")))
 	.Always(When(Event::Open).Do(PlayFx("RattleLockedDoor")))
-};
-
-// Exists.Closed.Unlocked
-const Door::State Door::Unlocked
-{
-	Name("Unlocked").Parent(Closed)
-	.Always(When(Event::Lock).Goto(Locked).Do(PlayFx("LockingDoor")))
-	.Always(When(Event::Open).Goto(Opened).Do(PlayFx("OpeningDoor")))
 };
 
 // Exists.Opened
